@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Čebudky – mapa budek</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
+
+    .popup-title {
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .legend {
+      background: white;
+      padding: 10px 12px;
+      line-height: 1.5;
+      border-radius: 6px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.2);
+      font-size: 13px;
+    }
+
+    .legend i {
+      width: 12px;
+      height: 12px;
+      float: left;
+      margin-right: 8px;
+      margin-top: 3px;
+      opacity: 0.9;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+  // 1) Inicializace mapy
+  const map = L.map('map').setView([48.974, 14.474], 13);
+
+  // 2) Podkladová mapa
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // 3) Barva bodů podle statusu
+  function getColor(status) {
+    switch (status) {
+      case 'Prázdná':
+        return 'gray';
+      case 'Obsazená':
+        return 'green';
+      case 'Neznámá':
+        return 'orange';
+      default:
+        return 'blue';
+    }
+  }
+
+  // 4) Obsah popup okna
+  function popupContent(properties) {
+    return `
+      <div class="popup-title">Budka ${properties.box_id ?? '-'}</div>
+      <b>Lokalita:</b> ${properties.lokalita ?? '-'}<br>
+      <b>Status:</b> ${properties.status ?? '-'}<br>
+      <b>Hnízdní sezóna:</b> ${properties.hnizdni_sezona ?? '-'}<br>
+      <b>Druh:</b> ${properties.druh ?? '-'}<br>
+      <b>Vejce:</b> ${properties.vejce ?? '-'}<br>
+      <b>Mláďata:</b> ${properties.mladata ?? '-'}<br>
+      <b>Poslední update:</b> ${properties.posledn_update ?? '-'}
+    `;
+  }
+
+  // 5) Načtení GeoJSON
+  fetch('nestboxes.geojson')
+    .then(response => response.json())
+    .then(data => {
+      const geojsonLayer = L.geoJSON(data, {
+        pointToLayer: function(feature, latlng) {
+          return L.circleMarker(latlng, {
+            radius: 7,
+            fillColor: getColor(feature.properties.status),
+            color: '#222',
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.85
+          });
+        },
+        onEachFeature: function(feature, layer) {
+          layer.bindPopup(popupContent(feature.properties));
+        }
+      }).addTo(map);
+
+      // 6) Přizpůsobení mapy rozsahu bodů
+      map.fitBounds(geojsonLayer.getBounds(), { padding: [20, 20] });
+    })
+    .catch(error => {
+      console.error('Chyba při načítání GeoJSON:', error);
+      alert('Nepodařilo se načíst soubor nestboxes.geojson');
+    });
+
+  // 7) Legenda
+  const legend = L.control({ position: 'bottomright' });
+
+  legend.onAdd = function () {
+    const div = L.DomUtil.create('div', 'legend');
+    div.innerHTML = `
+      <div><i style="background: gray;"></i> Prázdná</div>
+      <div><i style="background: green;"></i> Obsazená</div>
+      <div><i style="background: orange;"></i> Neznámá</div>
+      <div><i style="background: blue;"></i> Jiný stav</div>
+    `;
+    return div;
+  };
+
+  legend.addTo(map);
+</script>
+
+</body>
+</html>
