@@ -63,11 +63,11 @@
   function getColor(status) {
     switch (status) {
       case 'Prázdná':
-        return 'gray';
+        return 'orange';
       case 'Obsazená':
         return 'green';
-      case 'Neznámá':
-        return 'orange';
+      case 'Stav neznámý':
+        return 'gray';
       default:
         return 'blue';
     }
@@ -83,7 +83,7 @@
       <b>Druh:</b> ${properties.druh ?? '-'}<br>
       <b>Vejce:</b> ${properties.vejce ?? '-'}<br>
       <b>Mláďata:</b> ${properties.mladata ?? '-'}<br>
-      <b>Poslední update:</b> ${properties.posledn_update ?? '-'}
+      <b>Poslední update:</b> ${properties.posledni_update ?? '-'}
     `;
   }
 
@@ -121,10 +121,9 @@
   legend.onAdd = function () {
     const div = L.DomUtil.create('div', 'legend');
     div.innerHTML = `
-      <div><i style="background: gray;"></i> Prázdná</div>
+      <div><i style="background: orange;"></i> Prázdná</div>
       <div><i style="background: green;"></i> Obsazená</div>
-      <div><i style="background: orange;"></i> Neznámá</div>
-      <div><i style="background: blue;"></i> Jiný stav</div>
+      <div><i style="background: gray;"></i> Stav neznámý</div>
     `;
     return div;
   };
