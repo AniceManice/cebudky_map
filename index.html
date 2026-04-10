@@ -77,7 +77,7 @@
   function popupContent(properties) {
     return `
       <div class="popup-title">Budka ${properties.box_id ?? '-'}</div>
-      <b>Datum instalace:</b> ${properties.datum_instalace || '-'}<br>
+      <b>Datum instalace:</b> ${properties.datum_instalace ?? '-'}<br>
       <b>Lokalita:</b> ${properties.lokalita ?? '-'}<br>
       <b>Status:</b> ${properties.status ?? '-'}<br>
       <b>Hnízdní sezóna:</b> ${properties.hnizdni_sezona ?? '-'}<br>
