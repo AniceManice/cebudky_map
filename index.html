@@ -42,24 +42,91 @@
       opacity: 0.9;
       border-radius: 50%;
     }
+
+    .photo-button {
+      margin-top: 8px;
+      padding: 5px 10px;
+      background: #2c7be5;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .photo-button:hover {
+      background: #1f5fb8;
+    }
+
+    #lightbox {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 9999;
+    }
+
+    #lightbox-img {
+      max-width: 90%;
+      max-height: 80%;
+      border-radius: 8px;
+      background: white;
+    }
+
+    #lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      color: white;
+      font-size: 34px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .lightbox-controls {
+      margin-top: 10px;
+    }
+
+    .lightbox-controls button {
+      padding: 6px 12px;
+      margin: 0 5px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
   </style>
 </head>
+
 <body>
 
 <div id="map"></div>
 
+<div id="lightbox">
+  <span id="lightbox-close" onclick="closeGallery()">&times;</span>
+  <img id="lightbox-img" src="" alt="Fotografie budky">
+  <div class="lightbox-controls">
+    <button onclick="prevPhoto()">←</button>
+    <button onclick="nextPhoto()">→</button>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-  // 1) Inicializace mapy
   const map = L.map('map').setView([48.974, 14.474], 13);
 
-  // 2) Podkladová mapa
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // 3) Barva bodů podle statusu
+  let currentPhotos = [];
+  let currentIndex = 0;
+
   function getColor(status) {
     switch (status) {
       case 'Prázdná':
@@ -73,8 +140,15 @@
     }
   }
 
-  // 4) Obsah popup okna
   function popupContent(properties) {
+    const photos = properties.photos
+      ? properties.photos.split(';').map(p => p.trim()).filter(p => p.length > 0)
+      : [];
+
+    const photoButton = photos.length > 0
+      ? `<br><button class="photo-button" onclick="openGallery('${photos.join('|')}')">📷 Zobrazit fotografie</button>`
+      : '';
+
     return `
       <div class="popup-title">Budka ${properties.box_id ?? '-'}</div>
       <b>Datum instalace:</b> ${properties.datum_instalace ?? '-'}<br>
@@ -85,11 +159,40 @@
       <b>Vejce:</b> ${properties.vejce ?? '-'}<br>
       <b>Mláďata:</b> ${properties.mladata ?? '-'}<br>
       <b>Poslední update:</b> ${properties.posledni_update || '-'}
+      ${photoButton}
     `;
   }
 
-  // 5) Načtení GeoJSON
-  fetch('nestboxes.geojson')
+  function openGallery(photoString) {
+    currentPhotos = photoString.split('|');
+    currentIndex = 0;
+    document.getElementById('lightbox').style.display = 'flex';
+    showPhoto();
+  }
+
+  function showPhoto() {
+    if (currentPhotos.length === 0) return;
+    document.getElementById('lightbox-img').src = currentPhotos[currentIndex];
+  }
+
+  function nextPhoto() {
+    if (currentPhotos.length === 0) return;
+    currentIndex = (currentIndex + 1) % currentPhotos.length;
+    showPhoto();
+  }
+
+  function prevPhoto() {
+    if (currentPhotos.length === 0) return;
+    currentIndex = (currentIndex - 1 + currentPhotos.length) % currentPhotos.length;
+    showPhoto();
+  }
+
+  function closeGallery() {
+    document.getElementById('lightbox').style.display = 'none';
+    document.getElementById('lightbox-img').src = '';
+  }
+
+  fetch('nestboxes.geojson?v=' + Date.now())
     .then(response => response.json())
     .then(data => {
       const geojsonLayer = L.geoJSON(data, {
@@ -108,7 +211,6 @@
         }
       }).addTo(map);
 
-      // 6) Přizpůsobení mapy rozsahu bodů
       map.fitBounds(geojsonLayer.getBounds(), { padding: [20, 20] });
     })
     .catch(error => {
@@ -116,7 +218,6 @@
       alert('Nepodařilo se načíst soubor nestboxes.geojson');
     });
 
-  // 7) Legenda
   const legend = L.control({ position: 'bottomright' });
 
   legend.onAdd = function () {
@@ -125,6 +226,7 @@
       <div><i style="background: orange;"></i> Prázdná</div>
       <div><i style="background: green;"></i> Obsazená</div>
       <div><i style="background: gray;"></i> Stav neznámý</div>
+      <div><i style="background: blue;"></i> Jiný stav</div>
     `;
     return div;
   };
